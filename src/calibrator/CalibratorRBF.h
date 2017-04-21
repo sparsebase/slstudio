@@ -11,11 +11,10 @@
 
 using namespace std;
 
-class CalibratorRBF : public Calibrator {
-    Q_OBJECT
+class SLALGORITHM_EXPORT CalibratorRBF : public Calibrator {
     public:
         CalibratorRBF(unsigned int _screenCols, unsigned int _screenRows);
-        CalibrationData calibrate();
+        CalibrationData calibrate(const int checkerSize, const int checkerRows, const int checkerCols);
         ~CalibratorRBF(){delete encoder; delete decoder;}
     private:
         Encoder *encoder;

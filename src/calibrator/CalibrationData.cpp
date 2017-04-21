@@ -1,8 +1,6 @@
 #include "CalibrationData.h"
 
-#include <QFileInfo>
-#include <QString>
-#include <QDateTime>
+#include <boost/filesystem.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -22,21 +20,18 @@ CalibrationData::CalibrationData(cv::Matx33f _Kc, cv::Vec<float, 5> _kc, double 
 
 }
 
-bool CalibrationData::load(const QString& filename){
-    QFileInfo info(filename);
-  //  QString type = info.suffix();
-
-    if(info.exists() && info.suffix()=="xml")
+bool CalibrationData::load(const std::string& filename){
+    if(boost::filesystem::exists(filename) && 
+        boost::filesystem::path(filename).extension()=="xml") {
         return loadXML(filename);
-    else {
-        std::cerr << "CalibrationData error: no such .xml file: " << filename.toStdString() << std::endl;
+    } else {
+        std::cerr << "CalibrationData error: no such .xml file: " << filename << std::endl;
         return false;
     }
 }
 
-bool CalibrationData::save(const QString& filename){
-    QFileInfo info(filename);
-    QString type = info.suffix();
+bool CalibrationData::save(const std::string& filename){
+    std::string type = boost::filesystem::path(filename).extension().string();
 
     if (type=="xml"){
         return saveXML(filename);
@@ -45,18 +40,18 @@ bool CalibrationData::save(const QString& filename){
     } else if (type=="m"){
         return saveMatlab(filename);
     } else {
-        std::cerr << "CalibrationData error save: unknown file extension: " << type.toStdString() << std::endl;
+        std::cerr << "CalibrationData error save: unknown file extension: " << type << std::endl;
         return false;
     }
 
     return false;
 }
 
-bool CalibrationData::loadXML(const QString& filename){
-    cv::FileStorage fs(filename.toStdString(), cv::FileStorage::READ); //
+bool CalibrationData::loadXML(const std::string& filename){
+    cv::FileStorage fs(filename, cv::FileStorage::READ); //
     if (!fs.isOpened())
     {
-        std::cerr << "CalibrationData error: could not open file " << filename.toStdString() << std::endl;
+        std::cerr << "CalibrationData error: could not open file " << filename << std::endl;
         return false;
     }
 
@@ -82,10 +77,10 @@ bool CalibrationData::loadXML(const QString& filename){
     return true;
 }
 
-bool CalibrationData::saveSLCALIB(const QString& filename){
+bool CalibrationData::saveSLCALIB(const std::string& filename){
 
 
-    FILE * fp = fopen(qPrintable(filename), "w");
+    FILE * fp = fopen(filename.c_str(), "w");
     if (!fp)
         return false;
 
@@ -108,8 +103,8 @@ bool CalibrationData::saveSLCALIB(const QString& filename){
 
 }
 
-bool CalibrationData::saveXML(const QString& filename){
-    cv::FileStorage fs(filename.toStdString(), cv::FileStorage::WRITE);
+bool CalibrationData::saveXML(const std::string& filename){
+    cv::FileStorage fs(filename, cv::FileStorage::WRITE);
     if (!fs.isOpened())
         return false;
 
@@ -128,19 +123,19 @@ bool CalibrationData::saveXML(const QString& filename){
     return true;
 }
 
-bool CalibrationData::saveMatlab(const QString& filename){
+bool CalibrationData::saveMatlab(const std::string& filename){
 
-    std::ofstream file(qPrintable(filename));
+    std::ofstream file(filename);
     if (!file)
         return false;
 
     file << "%%SLStudio calibration"  << std::endl;
-    file << "Kc = " << Kc << ";" << std::endl;
-    file << "kc = " << kc << ";" << std::endl;
-    file << "Kp = " << Kp << ";" << std::endl;
-    file << "kp = " << kp << ";" << std::endl;
-    file << "Rp = " << Rp << ";" << std::endl;
-    file << "Tp = " << Tp << ";" << std::endl;
+    file << "Kc = " << cv::Mat(Kc) << ";" << std::endl;
+    file << "kc = " << cv::Mat(kc) << ";" << std::endl;
+    file << "Kp = " << cv::Mat(Kp) << ";" << std::endl;
+    file << "kp = " << cv::Mat(kp) << ";" << std::endl;
+    file << "Rp = " << cv::Mat(Rp) << ";" << std::endl;
+    file << "Tp = " << cv::Mat(Tp) << ";" << std::endl;
 
     file.close();
 
@@ -154,14 +149,14 @@ void CalibrationData::print(std::ostream &stream){
             << "========================================\n"
             << "Camera Calibration: \n"
             << "- cam_error:\n" << cam_error << "\n"
-            << "- Kc:\n" << Kc << "\n"
-            << "- kc:\n" << kc << "\n"
+            << "- Kc:\n" << cv::Mat(Kc) << "\n"
+            << "- kc:\n" << cv::Mat(kc) << "\n"
             << "Projector Calibration: " << "\n"
             << "- proj_error: \n" << proj_error << "\n"
-            << "- Kp: \n" << Kp << "\n"
-            << "- kp: \n" << kp << "\n"
+            << "- Kp: \n" << cv::Mat(Kp) << "\n"
+            << "- kp: \n" << cv::Mat(kp) << "\n"
             << "Stereo Calibration: \n"
             << "- stereo_error:\n" << stereo_error << "\n"
-            << "- Rp:\n" << Rp << "\n"
-            << "- Tp:\n" << Tp << std::endl;
+            << "- Rp:\n" << cv::Mat(Rp) << "\n"
+            << "- Tp:\n" << cv::Mat(Tp) << std::endl;
 }

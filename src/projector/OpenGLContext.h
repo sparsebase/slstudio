@@ -13,12 +13,7 @@
 #include <vector>
 #include <sys/types.h>
 
-struct ScreenInfo {
-    unsigned int resX, resY;
-    unsigned int posX, posY;
-    std::string name;
-    ScreenInfo(): resX(0), resY(0), posX(0), posY(0){}
-};
+#include "Projector.h"
 
 // Platform dependent OpenGLContext class
 class OpenGLContext{

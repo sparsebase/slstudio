@@ -4,8 +4,6 @@
 #include "cvtools.h"
 #include "RBFInterpolator.h"
 
-#include <QSettings>
-#include <QDateTime>
 
 CalibratorRBF::CalibratorRBF(unsigned int _screenCols, unsigned int _screenRows): Calibrator(_screenCols, _screenRows){
 
@@ -22,15 +20,7 @@ CalibratorRBF::CalibratorRBF(unsigned int _screenCols, unsigned int _screenRows)
 
 }
 
-CalibrationData CalibratorRBF::calibrate(){
-
-    QSettings settings("SLStudio");
-
-    //Checkerboard parameters
-    unsigned int checkerSize = settings.value("calibration/checkerSize").toInt();
-    unsigned int checkerRows = settings.value("calibration/checkerRows").toInt();
-    unsigned int checkerCols = settings.value("calibration/checkerCols").toInt();
-
+CalibrationData CalibratorRBF::calibrate(const int checkerSize, const int checkerRows, const int checkerCols){
     // Number of saddle points on calibration pattern
     cv::Size patternSize(checkerCols,checkerRows);
 
@@ -82,7 +72,7 @@ CalibrationData CalibratorRBF::calibrate(){
     cv::imwrite("shadingColor.png", shadingColor);
 #endif
         // Emit chessboard results
-        emit newSequenceResult(shadingColor, i, success);
+        newSequenceResult(shadingColor, i, success);
 
         if(success){
 
@@ -175,8 +165,13 @@ CalibrationData CalibratorRBF::calibrate(){
 
     //stereo calibration
     cv::Mat Rp, Tp, E, F;
+#ifdef OPENCV2
+    double stereo_error = cv::stereoCalibrate(Q, qc, qp, Kc, kc, Kp, kp, frameSize, Rp, Tp, E, F,
+                                              cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, DBL_EPSILON));
+#else // OPENCV2
     double stereo_error = cv::stereoCalibrate(Q, qc, qp, Kc, kc, Kp, kp, frameSize, Rp, Tp, E, F, cv::CALIB_FIX_INTRINSIC,
                                               cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, DBL_EPSILON));
+#endif // OPENCV2
 
     CalibrationData calData(Kc, kc, cam_error, Kp, kp, proj_error, Rp, Tp, stereo_error);
 

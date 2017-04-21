@@ -22,10 +22,7 @@
 #include "CodecPhaseShiftMicro.h"
 #include "CodecFastRatio.h"
 #include "CodecGrayCode.h"
-
-#include "ProjectorOpenGL.h"
-#include "ProjectorLC3000.h"
-#include "ProjectorLC4500.h"
+#include "Projector.h"
 
 #include "SLProjectorVirtual.h"
 #include "SLCameraVirtual.h"
@@ -60,14 +57,16 @@ void SLScanWorker::setup(){
 
     // Initialize projector
     int screenNum = settings.value("projector/screenNumber", -1).toInt();
-    if(screenNum >= 0)
-        projector = new ProjectorOpenGL(screenNum);
-    else if(screenNum == -1)
+    if(screenNum == -1)
         projector = new SLProjectorVirtual(screenNum);
+    else if(screenNum >= 0)
+        projector = Projector::NewProjector(projectorTypeOpenGL, screenNum);
     else if(screenNum == -2)
-        projector = new ProjectorLC3000(0);
+        projector = Projector::NewProjector(projectorTypeLC3000);
     else if(screenNum == -3)
-        projector = new ProjectorLC4500(0);
+        projector = Projector::NewProjector(projectorTypeLC4500);
+    else if(screenNum == -4)
+        projector = Projector::NewProjector(projectorTypeQtGL);
     else
         std::cerr << "SLScanWorker: invalid projector id " << screenNum << std::endl;
 
@@ -141,6 +140,10 @@ void SLScanWorker::setup(){
 
         if(diamondPattern)
             pattern=cvtools::diamondDownsample(pattern);
+
+        if (!pattern.isContinuous()) {
+            pattern = pattern.clone();
+        }
 
         projector->setPattern(i, pattern.ptr(), pattern.cols, pattern.rows);
 

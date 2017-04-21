@@ -12,6 +12,12 @@
 #ifdef WITH_CAMERAPOINTGREY
     #include "CameraPointGrey.h"
 #endif
+#ifdef WITH_CAMERAOPENCV
+    #include "CameraOpenCV.h"
+#endif
+#ifdef WITH_CAMERAV4L
+    #include "CameraV4L.h"
+#endif
 
 // Global camera enumerator
 std::vector< std::vector<CameraInfo> > Camera::GetInterfaceCameraList(){
@@ -32,6 +38,14 @@ std::vector< std::vector<CameraInfo> > Camera::GetInterfaceCameraList(){
 #ifdef WITH_CAMERAPOINTGREY
     std::vector<CameraInfo> ptgreycameras = CameraPointGrey::getCameraList();
     ret.push_back(ptgreycameras);
+#endif
+#ifdef WITH_CAMERAOPENCV
+    std::vector<CameraInfo> cvcameras = CameraOpenCV::getCameraList();
+    ret.push_back(cvcameras);
+#endif
+#ifdef WITH_CAMERAV4L
+    std::vector<CameraInfo> v4lcameras = CameraV4L::getCameraList();
+    ret.push_back(v4lcameras);
 #endif
 
     return ret;
@@ -61,6 +75,16 @@ Camera* Camera::NewCamera(unsigned int interfaceNum, unsigned int camNum, Camera
     interfaceNum -= 1;
     if(interfaceNum == 0)
         return new CameraPointGrey(camNum, triggerMode);
+#endif
+#ifdef WITH_CAMERAOPENCV
+    interfaceNum -= 1;
+    if(interfaceNum == 0)
+        return new CameraOpenCV(camNum);
+#endif
+#ifdef WITH_CAMERAV4L
+    interfaceNum -= 1;
+    if(interfaceNum == 0)
+        return new CameraV4L(camNum);
 #endif
 
     return (Camera*)NULL;

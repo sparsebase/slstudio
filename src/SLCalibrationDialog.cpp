@@ -7,10 +7,8 @@
 #include <opencv2/opencv.hpp>
 
 #include "Camera.h"
-#include "ProjectorOpenGL.h"
-#include "ProjectorLC3000.h"
-#include "ProjectorLC4500.h"
 #include "SLProjectorVirtual.h"
+#include "Projector.h"
 
 #include "CalibratorLocHom.h"
 #include "CalibratorRBF.h"
@@ -51,14 +49,16 @@ SLCalibrationDialog::SLCalibrationDialog(SLStudio *parent) : QDialog(parent), ui
 
     // Initialize projector
     int screenNum = settings.value("projector/screenNumber", -1).toInt();
-    if(screenNum >= 0)
-        projector = new ProjectorOpenGL(screenNum);
-    else if(screenNum == -1)
+    if(screenNum == -1)
         projector = new SLProjectorVirtual(screenNum);
+    else if(screenNum >= 0)
+        projector = Projector::NewProjector(projectorTypeOpenGL, screenNum);
     else if(screenNum == -2)
-        projector = new ProjectorLC3000(0);
+        projector = Projector::NewProjector(projectorTypeLC3000);
     else if(screenNum == -3)
-        projector = new ProjectorLC4500(0);
+        projector = Projector::NewProjector(projectorTypeLC4500);
+    else if(screenNum == -4)
+        projector = Projector::NewProjector(projectorTypeQtGL);
     else
         std::cerr << "SLCalibrationDialog: invalid projector id " << screenNum << std::endl;
 
@@ -79,7 +79,7 @@ SLCalibrationDialog::SLCalibrationDialog(SLStudio *parent) : QDialog(parent), ui
     // Create calibrator
     calibrator = new CalibratorLocHom(screenCols, screenRows);
 
-    connect(calibrator, SIGNAL(newSequenceResult(cv::Mat, unsigned int, bool)), this, SLOT(onNewSequenceResult(cv::Mat,uint,bool)));
+    calibrator->setObserver(this);
 
     // Upload patterns to projector/GPU
     for(unsigned int i=0; i<calibrator->getNPatterns(); i++){
@@ -92,8 +92,11 @@ SLCalibrationDialog::SLCalibrationDialog(SLStudio *parent) : QDialog(parent), ui
         if(diamondPattern)
             pattern = cvtools::diamondDownsample(pattern);
 
-        projector->setPattern(i, pattern.ptr(), pattern.cols, pattern.rows);
+        if (!pattern.isContinuous()) {
+            pattern = pattern.clone();
+        }
 
+        projector->setPattern(i, pattern.ptr(), pattern.cols, pattern.rows);
     }
 
     // Start live view
@@ -182,7 +185,7 @@ void SLCalibrationDialog::on_snapButton_clicked(){
     #if 1
         // Write frame seq to disk
         for(int i=0; i<frameSeq.size(); i++){
-            QString filename = QString("frameSeq_%1.bmp").arg(i, 2, 10, QChar('0'));
+            QString filename = QString("frameSeq_%1.png").arg(i, 3, 10, QChar('0'));
             cv::imwrite(filename.toStdString(), frameSeq[i]);
         }
     #endif
@@ -219,7 +222,10 @@ void SLCalibrationDialog::on_calibrateButton_clicked(){
     }
 
     // Perform calibration
-    calib = calibrator->calibrate();
+    unsigned int checkerSize = ui->checkerSizeBox->value();
+    unsigned int checkerRows = ui->checkerRowsBox->value();
+    unsigned int checkerCols = ui->checkerColsBox->value();
+    calib = calibrator->calibrate(checkerSize, checkerRows, checkerCols);
 
     // Re-enable interface elements
     ui->calibrateButton->setEnabled(true);
@@ -258,7 +264,7 @@ void SLCalibrationDialog::on_saveButton_clicked(){
 }
 
 
-void SLCalibrationDialog::onNewSequenceResult(cv::Mat img, unsigned int idx, bool success){
+void SLCalibrationDialog::newSequenceResult(cv::Mat img, unsigned int idx, bool success){
 
     // Skip non-active frame sequences
     int idxListView = activeFrameSeqs[idx];
